@@ -1,65 +1,72 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 from math import sqrt
 from datetime import datetime
 
 app = Flask('my_distance')
 
-distances = list()
+distances = []
+
+# ✅ Fonction propre pour calculer la distance
+def calculate_distance(p1, p2):
+    return sqrt((p2[1] - p1[1])**2 + (p2[0] - p1[0])**2)
+
+# ✅ Fonction pour parser les entrées utilisateur
+def parse_point(point_str):
+    try:
+        x, y = map(int, point_str.split(','))
+        return (x, y)
+    except:
+        return None
 
 @app.route('/', methods=['GET', 'POST'])
 def html_calculate():
     if request.method == 'GET':
-    # Si get, afficher la page vide
         return render_template('index.html', result=None)
+
     if request.method == 'POST':
-    # Si post, calculer et afficher le résultat
-        eNd = tuple(map(lambda x: int(x), request.form['apoint'].split(',')[0:2]))
-        start = list(map(lambda y: int(y), request.form['bpoint'].split(',')[0:2]))
-        startPoint = start
-        result_tmp = sqrt((eNd[1] - start[1])**2 + (eNd[0] - startPoint[0])**2)
-        EndPoint = eNd
-        result =             {
-                    'requested_at': datetime.now(),
-                    'result_distance': result_tmp,
-                    'start_point': startPoint,
-                    'end_point': EndPoint
-                }
-        distances.append({
-                    'requested_at': datetime.now(),
-                    'result_distance': result_tmp,
-                    'start_point': startPoint,
-                    'end_point': EndPoint
-                })    
+        start_point = parse_point(request.form['bpoint'])
+        end_point = parse_point(request.form['apoint'])
+
+        if not start_point or not end_point:
+            return render_template('index.html', result="Erreur de saisie")
+
+        result_tmp = calculate_distance(start_point, end_point)
+
+        result = {
+            'requested_at': datetime.now(),
+            'result_distance': result_tmp,
+            'start_point': start_point,
+            'end_point': end_point
+        }
+
+        distances.append(result)
+
         return render_template('index.html', result=result)
 
-@app.route('/api')
-def index():
-    return {}
+# ✅ API liste
+@app.route('/api/distances', methods=['GET'])
+def get_distances():
+    return jsonify(distances)
 
-@app.route('/api/distances')
-def already_calculated():
-    starttime = datetime.now()
-    result = list(map(lambda x: {
-                    'requested_at': x['requested_at'],
-                    'result_distance': x['result_distance'],
-                    'start_point': x['start_point'],
-                    'end_point': x['end_point']        
-    }, distances))
-    end = datetime.now()
-    return result
-    print(f'result given in {end - starttime} secondes')
+# ✅ API calcul
+@app.route('/api/distance', methods=['POST'])
+def calculate_api():
+    if not request.json:
+        return {"error": "Invalid input"}, 400
 
-@app.route('/api/distance', methods=['POST', 'GET', 'PUT'])
-def Calculate():
-    startPoint = request.json['start_point']
-    startPoint = list(map(lambda y: int(y), request.json['start_point'].split(',')[0:2]))
-    EndPoint = tuple(map(lambda x: int(x), request.json['end_point'].split(',')[0:2]))
-    
-    result_tmp = sqrt((EndPoint[1] - startPoint[1])**2 + (EndPoint[0] - startPoint[0])**2)
-    result =             {
-                'requested_at': datetime.now(),
-                'result_distance': result_tmp,
-                'start_point': startPoint,
-                'end_point': EndPoint
-            }
-    return result
+    start_point = parse_point(request.json.get('start_point', ''))
+    end_point = parse_point(request.json.get('end_point', ''))
+
+    if not start_point or not end_point:
+        return {"error": "Invalid format"}, 400
+
+    result_tmp = calculate_distance(start_point, end_point)
+
+    result = {
+        'requested_at': datetime.now(),
+        'result_distance': result_tmp,
+        'start_point': start_point,
+        'end_point': end_point
+    }
+
+    return jsonify(result)

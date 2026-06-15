@@ -3,7 +3,7 @@ from math import sqrt
 
 app = Flask(__name__)
 
-# ✅ Fonction propre pour calculer la distance
+# ✅ Fonction de calcul de distance
 def calculate_distance(p1, p2):
     return sqrt((p2[0] - p1[0])**2 + (p2[1] - p1[1])**2)
 
@@ -19,7 +19,6 @@ def html_calculate():
             start_point = list(map(int, request.form['apoint'].split(',')[0:2]))
             end_point = list(map(int, request.form['bpoint'].split(',')[0:2]))
 
-            # ✅ Vérification
             if not start_point or not end_point:
                 return render_template('index.html', result="Erreur dans les coordonnées")
 
@@ -27,7 +26,7 @@ def html_calculate():
 
             return render_template('index.html', result=result)
 
-        except:
+        except Exception:
             return render_template('index.html', result="Erreur de saisie")
 
 
@@ -47,7 +46,7 @@ def api_distance():
             "distance": result
         })
 
-    except:
+    except Exception:
         return jsonify({"error": "Erreur de requête"}), 400
 
 
